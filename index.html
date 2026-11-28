@@ -366,4 +366,56 @@ if(CONFIG.calendlyBookingUrl){booking.href=CONFIG.calendlyBookingUrl;booking.tar
   },true);
 })();
 </script>
+
+<!-- Botones exclusivos para probar Checkout Pro en esta rama de prueba -->
+<style>
+  .mp-test-wrap{margin:12px 0 22px;padding:12px;border:1px dashed #8a6a12;background:#17140b}
+  .mp-test-label{display:block;color:#f2b400;font-size:.78rem;font-weight:800;letter-spacing:.08em;margin-bottom:8px}
+  .mp-test-button{display:inline-flex;align-items:center;justify-content:center;padding:11px 16px;background:transparent;border:1px solid #f2b400;color:#f2b400;font-weight:800;cursor:pointer}
+  .mp-test-button:disabled{opacity:.55;cursor:wait}
+</style>
+<script>
+(function(){
+  const tests=[
+    {id:'manualBuy',product_id:'manual',label:'Probar Checkout Pro · $25.000'},
+    {id:'consultBuy',product_id:'consultoria',label:'Probar Checkout Pro · $250.000'}
+  ];
+  tests.forEach(function(item){
+    const original=document.getElementById(item.id);
+    if(!original||!original.parentNode)return;
+    const wrap=document.createElement('div');
+    wrap.className='mp-test-wrap';
+    const note=document.createElement('span');
+    note.className='mp-test-label';
+    note.textContent='MODO DE PRUEBA · NO ES UN COBRO REAL';
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='mp-test-button';
+    button.textContent=item.label;
+    button.addEventListener('click',async function(){
+      button.disabled=true;
+      button.textContent='Conectando con Mercado Pago…';
+      try{
+        if(window.fbq)fbq('track','InitiateCheckout',{content_name:item.product_id==='manual'?'Manual del Mentor':'Consultoría individual',value:item.product_id==='manual'?25000:250000,currency:'ARS'});
+        const response=await fetch('/.netlify/functions/create-preference',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({product_id:item.product_id})
+        });
+        const data=await response.json();
+        if(!response.ok||!data.checkout_url)throw new Error(data.error||'No se pudo iniciar el pago de prueba.');
+        const checkout=new URL(data.checkout_url);
+        if(checkout.protocol!=='https:'||!/(^|\\.)mercadopago\\.com$|(^|\\.)mpago\\.la$/i.test(checkout.hostname))throw new Error('Mercado Pago devolvió un enlace inesperado.');
+        location.assign(checkout.href);
+      }catch(error){
+        alert(error.message||'No se pudo conectar con Mercado Pago.');
+        button.disabled=false;
+        button.textContent=item.label;
+      }
+    });
+    wrap.appendChild(note);wrap.appendChild(button);
+    original.insertAdjacentElement('afterend',wrap);
+  });
+})();
+</script>
+
 </body></html>
