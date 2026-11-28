@@ -58,8 +58,17 @@ exports.handler = async (event) => {
       return json(502, { error: "Mercado Pago no pudo crear el checkout.", detail: data.message || data.error || "Error de API" });
     }
 
-    const checkoutUrl = data.sandbox_init_point || data.init_point;
-    if (!checkoutUrl) return json(502, { error: "Mercado Pago no devolvió el enlace de prueba." });
+    // Fail closed: never fall back to init_point, which may be a live checkout URL.
+    const checkoutUrl = data.sandbox_init_point;
+    if (!checkoutUrl) {
+      return json(502, { error: "Mercado Pago no devolvió un enlace de prueba. No se abrió ningún checkout." });
+    }
+
+    let parsedUrl;
+    try { parsedUrl = new URL(checkoutUrl); } catch {}
+    if (!parsedUrl || parsedUrl.protocol !== "https:" || parsedUrl.hostname !== "sandbox.mercadopago.com") {
+      return json(502, { error: "El enlace recibido no corresponde al entorno seguro de prueba. No se abrió ningún checkout." });
+    }
 
     return json(200, { checkout_url: checkoutUrl });
   } catch {
