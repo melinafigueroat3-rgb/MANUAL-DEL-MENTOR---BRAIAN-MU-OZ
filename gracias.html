@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Estado de tu pago | Braian Muñoz</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101010;color:#f4f1e9;font-family:Arial,sans-serif;padding:24px}
+    main{width:min(620px,100%);padding:36px;border:1px solid #51451f;background:#191919}
+    h1{font-size:clamp(2rem,7vw,3.5rem);line-height:1;margin:0 0 18px;color:#f2b400}
+    p{line-height:1.6;color:#dedbd3}.muted{color:#b5b1a8;font-size:.92rem}
+    a{display:inline-block;margin-top:16px;padding:12px 18px;background:#f2b400;color:#111;text-decoration:none;font-weight:bold}
+  </style>
+  <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1177729048593531');fbq('track','PageView');
+  </script>
+</head>
+<body>
+  <main>
+    <h1 id="heading">Estamos comprobando tu pago</h1>
+    <p id="message">Consultamos el estado directamente con Mercado Pago. No cierres esta página todavía.</p>
+    <p id="detail" class="muted" aria-live="polite">Esto puede demorar unos segundos.</p>
+    <a href="/" id="home" hidden>Volver al sitio</a>
+  </main>
+  <script>
+  (async function(){
+    const params=new URLSearchParams(location.search);
+    const paymentId=params.get('payment_id')||params.get('collection_id');
+    const heading=document.getElementById('heading');
+    const message=document.getElementById('message');
+    const detail=document.getElementById('detail');
+    const home=document.getElementById('home');
+    home.hidden=false;
+
+    if(!paymentId){
+      heading.textContent='No encontramos un pago para verificar';
+      message.textContent='Si realizaste el pago, escribinos por WhatsApp para que podamos ayudarte.';
+      detail.textContent='No se registró un identificador de pago en el regreso desde Mercado Pago.';
+      return;
+    }
+
+    for(let attempt=0;attempt<8;attempt++){
+      try{
+        const response=await fetch('/.netlify/functions/verify-payment?payment_id='+encodeURIComponent(paymentId),{cache:'no-store'});
+        const result=await response.json();
+        if(response.ok&&result.verified&&result.status==='approved'){
+          heading.textContent='¡Pago aprobado!';
+          message.textContent='Mercado Pago confirmó tu pago. Gracias por confiar en Braian Muñoz.';
+          detail.textContent='Producto: '+(result.product==='manual'?'Manual del Mentor':'Consultoría individual')+'.';
+          const key='mdmpx_purchase_'+paymentId;
+          if(!localStorage.getItem(key)){
+            fbq('track','Purchase',{value:result.amount,currency:result.currency},{eventID:'mp_'+paymentId});
+            localStorage.setItem(key,'1');
+          }
+          return;
+        }
+        if(result.status==='rejected'||result.status==='cancelled'){
+          heading.textContent='El pago no fue aprobado';
+          message.textContent='No se confirmó el pago. Podés volver al sitio y comunicarte con nosotros si necesitás ayuda.';
+          detail.textContent='Estado informado por Mercado Pago: '+result.status+'.';
+          return;
+        }
+        detail.textContent='El pago todavía figura pendiente o en proceso. Seguimos comprobándolo…';
+      }catch(e){
+        detail.textContent='No pudimos consultar el estado en este intento. Volvemos a probar…';
+      }
+      await new Promise(resolve=>setTimeout(resolve,3000));
+    }
+    heading.textContent='Tu pago sigue en revisión';
+    message.textContent='Todavía no podemos confirmar que esté aprobado. No vuelvas a pagar; consultá el estado con nosotros.';
+    detail.textContent='La página no registra una compra hasta recibir la confirmación del servidor.';
+  })();
+  </script>
+</body>
+</html>
