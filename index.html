@@ -404,7 +404,7 @@ if(CONFIG.calendlyBookingUrl){booking.href=CONFIG.calendlyBookingUrl;booking.tar
         const data=await response.json();
         if(!response.ok||!data.checkout_url)throw new Error(data.error||'No se pudo iniciar el pago de prueba.');
         const checkout=new URL(data.checkout_url);
-        if(checkout.protocol!=='https:'||!/(^|\.)mercadopago\.com$|(^|\.)mpago\.la$/i.test(checkout.hostname))throw new Error('Mercado Pago devolvió un enlace inesperado.');
+        if(checkout.protocol!=='https:'||!['sandbox.mercadopago.com.ar','sandbox.mercadopago.com'].includes(checkout.hostname.toLowerCase()))throw new Error('El enlace no pertenece al checkout de prueba autorizado.');
         location.assign(checkout.href);
       }catch(error){
         alert(error.message||'No se pudo conectar con Mercado Pago.');
