@@ -1,1 +1,0 @@
-Prueba temporal de conexión de escritura. Este archivo se elimina a continuación.
