@@ -66,7 +66,8 @@ exports.handler = async (event) => {
 
     let parsedUrl;
     try { parsedUrl = new URL(checkoutUrl); } catch {}
-    if (!parsedUrl || parsedUrl.protocol !== "https:" || parsedUrl.hostname !== "sandbox.mercadopago.com") {
+    const allowedSandboxHosts = new Set(["sandbox.mercadopago.com.ar", "sandbox.mercadopago.com"]);
+    if (!parsedUrl || parsedUrl.protocol !== "https:" || !allowedSandboxHosts.has(parsedUrl.hostname)) {
       return json(502, { error: "El enlace recibido no corresponde al entorno seguro de prueba. No se abrió ningún checkout." });
     }
 
